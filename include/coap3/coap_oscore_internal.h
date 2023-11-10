@@ -21,7 +21,11 @@
 #ifndef COAP_OSCORE_INTERNAL_H_
 #define COAP_OSCORE_INTERNAL_H_
 
+#ifdef COAP_WITH_LIBTONGSUOMINI
+#include <tongsuo/oscore_context.h>
+#else
 #include "oscore/oscore_context.h"
+#endif
 
 /**
  * @ingroup internal_api

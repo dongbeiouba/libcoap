@@ -28,7 +28,11 @@
  * @{
  */
 
+#ifdef COAP_WITH_LIBTONGSUOMINI
+#include <tongsuo/oscore_cose.h>
+#else
 #include "oscore/oscore_cose.h"
+#endif
 
 #ifndef COAP_CRYPTO_MAX_KEY_SIZE
 #define COAP_CRYPTO_MAX_KEY_SIZE (32)

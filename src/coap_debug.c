@@ -1156,6 +1156,39 @@ coap_string_tls_version(char *buffer, size_t bufsize) {
              (unsigned long)((tls_version->built_version >> 16) & 0xff),
              (unsigned long)((tls_version->built_version >> 8) & 0xff));
     break;
+
+  case COAP_TLS_LIBRARY_TONGSUOMINI:
+    switch (tls_version->version & 0xff) {
+    case 0:
+      strcpy(beta, "-dev");
+      break;
+    case 0xff:
+      strcpy(beta, "");
+      break;
+    default:
+      snprintf(beta, sizeof(beta), "-pre%llu", tls_version->version & 0xff);
+      break;
+    }
+    switch (tls_version->built_version & 0xff) {
+    case 0:
+      strcpy(b_beta, "-dev");
+      break;
+    case 0xf:
+      strcpy(b_beta, "");
+      break;
+    default:
+      snprintf(b_beta, sizeof(b_beta), "-pre%llu", tls_version->version & 0xff);
+      break;
+    }
+    snprintf(buffer, bufsize, "TLS Library: Tongsuo-mini - runtime "
+             "%lu.%lu.%lu%s, libcoap built for %lu.%lu.%lu%s",
+             (unsigned long)(tls_version->version >> 24),
+             (unsigned long)((tls_version->version >> 16) & 0xff),
+             (unsigned long)((tls_version->version >> 8) & 0xff), beta,
+             (unsigned long)(tls_version->built_version >> 24),
+             (unsigned long)((tls_version->built_version >> 16) & 0xff),
+             (unsigned long)((tls_version->built_version >> 8) & 0xff),
+             b_beta);
   default:
     snprintf(buffer, bufsize, "Library type %d unknown", tls_version->type);
     break;

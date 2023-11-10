@@ -95,6 +95,7 @@ typedef enum coap_tls_library_t {
   COAP_TLS_LIBRARY_OPENSSL,   /**< Using OpenSSL library */
   COAP_TLS_LIBRARY_GNUTLS,    /**< Using GnuTLS library */
   COAP_TLS_LIBRARY_MBEDTLS,   /**< Using Mbed TLS library */
+  COAP_TLS_LIBRARY_TONGSUOMINI,   /**< Using Tongsuo-mini TLS library */
 } coap_tls_library_t;
 
 /**

@@ -259,20 +259,39 @@ coap_persist_observe_add(coap_context_t *context,
     } else
       goto oscore_fail;
 
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    osc_ctx = oscore_find_context(session->context, tsm_str_const(oscore_key_id.s, oscore_key_id.length),
+                                  have_id_context ? tsm_str_const(id_context.s, id_context.length) : NULL,
+                                  NULL, &session->recipient_ctx);
+#else
     osc_ctx = oscore_find_context(session->context, oscore_key_id,
                                   have_id_context ? &id_context : NULL, NULL,
                                   &session->recipient_ctx);
+#endif
     if (osc_ctx) {
       session->oscore_encryption = 1;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      oscore_new_association(session, pdu, &pdu->actual_token,
+                             session->recipient_ctx,
+                             have_aad ? tsm_str_const(aad.s, aad.length) : NULL,
+                             have_nonce ? tsm_str_const(nonce.s, nonce.length) : NULL,
+                             have_partial_iv ? tsm_str_const(partial_iv.s, partial_iv.length) : NULL,
+                             1);
+#else
       oscore_new_association(session, pdu, &pdu->actual_token,
                              session->recipient_ctx,
                              have_aad ? &aad : NULL,
                              have_nonce ? &nonce : NULL,
-                             have_partial_iv ? &partial_iv : NULL,
+                             have_partial_iv ? &partial_iv: NULL,
                              1);
+#endif
       coap_log_debug("persist: OSCORE association added\n");
       oscore_log_hex_value(COAP_LOG_OSCORE, "partial_iv",
+#ifdef COAP_WITH_LIBTONGSUOMINI
+                           have_partial_iv ? tsm_str_const(partial_iv.s, partial_iv.length) : NULL);
+#else
                            have_partial_iv ? &partial_iv : NULL);
+#endif
     }
   }
 oscore_fail:

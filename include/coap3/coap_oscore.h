@@ -28,6 +28,10 @@
  * @{
  */
 
+#ifdef COAP_WITH_LIBTONGSUOMINI
+#include "coap_tongsuomini.h"
+#endif
+
 /**
  * Check whether OSCORE is available.
  *
@@ -192,7 +196,6 @@ int coap_new_oscore_recipient(coap_context_t *context,
  */
 int coap_delete_oscore_recipient(coap_context_t *context,
                                  coap_bin_const_t *recipient_id);
-
 /** @} */
 
 #endif /* COAP_OSCORE_H */

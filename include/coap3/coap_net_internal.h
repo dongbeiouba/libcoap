@@ -92,7 +92,11 @@ struct coap_context_t {
                                    *   context, otherwise 0. */
 #endif /* WITH_LWIP */
 #if COAP_OSCORE_SUPPORT
+# ifdef COAP_WITH_LIBTONGSUOMINI
+  oscore_ctx_t *p_osc_ctx; /**< primary oscore context  */
+# else
   struct oscore_ctx_t *p_osc_ctx; /**< primary oscore context  */
+# endif
 #endif /* COAP_OSCORE_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT

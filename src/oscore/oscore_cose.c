@@ -318,8 +318,6 @@ cose_encrypt0_set_plaintext(cose_encrypt0_t *ptr,
   ptr->plaintext.s = buffer;
   ptr->plaintext.length = size;
 }
-/* Return length */
-int cose_encrypt0_get_plaintext(cose_encrypt0_t *ptr, uint8_t **buffer);
 
 void
 cose_encrypt0_set_partial_iv(cose_encrypt0_t *ptr,

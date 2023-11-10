@@ -227,9 +227,6 @@ void cose_encrypt0_set_ciphertext(cose_encrypt0_t *ptr,
                                   uint8_t *buffer,
                                   size_t size);
 
-/* Return length */
-int cose_encrypt0_get_plaintext(cose_encrypt0_t *ptr, uint8_t **buffer);
-
 void cose_encrypt0_set_partial_iv(cose_encrypt0_t *ptr,
                                   coap_bin_const_t *partial_iv);
 

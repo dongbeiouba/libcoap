@@ -87,6 +87,9 @@ t_tls2(void) {
 #elif defined(COAP_WITH_LIBMBEDTLS)
   version.version = MBEDTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_MBEDTLS;
+#elif defined(COAP_WITH_LIBTONGSUOMINI)
+  version.version = TONGSUO_MINI_VERSION;
+  version.type = COAP_TLS_LIBRARY_TONGSUOMINI;
 #else /* no DTLS */
   version.version = 0;
   version.type = COAP_TLS_LIBRARY_NOTLS;

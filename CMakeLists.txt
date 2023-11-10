@@ -83,6 +83,15 @@ set_target_properties(${COAP_LIBRARY_NAME} PROPERTIES VERSION ${LIBCOAP_ABI_VERS
 #
 # options to tweak the library
 #
+option(WITH_TONGSUO_MINI "compile with tongsuo-mini support" OFF)
+
+if (WITH_TONGSUO_MINI)
+  message(STATUS "compiling with tongsuo-mini support")
+  set(COAP_WITH_LIBTONGSUOMINI 1)
+
+  target_include_directories(${COAP_LIBRARY_NAME} PUBLIC /opt/tongsuo-mini/include)
+  target_link_libraries(${COAP_LIBRARY_NAME} LINK_PUBLIC /opt/tongsuo-mini/lib/libtongsuo-mini.a)
+endif()
 
 option(
   ENABLE_DTLS
@@ -615,10 +624,12 @@ message(STATUS "WITH_GNUTLS:.....................${WITH_GNUTLS}")
 message(STATUS "WITH_TINYDTLS:...................${WITH_TINYDTLS}")
 message(STATUS "WITH_OPENSSL:....................${WITH_OPENSSL}")
 message(STATUS "WITH_MBEDTLS:....................${WITH_MBEDTLS}")
+message(STATUS "WITH_TONGSUO_MINI:...............${WITH_TONGSUO_MINI}")
 message(STATUS "HAVE_LIBTINYDTLS:................${COAP_WITH_LIBTINYDTLS}")
 message(STATUS "HAVE_LIBGNUTLS:..................${COAP_WITH_LIBGNUTLS}")
 message(STATUS "HAVE_LIBOPENSSL:.................${COAP_WITH_LIBOPENSSL}")
 message(STATUS "HAVE_LIBMBEDTLS:.................${COAP_WITH_LIBMBEDTLS}")
+message(STATUS "HAVE_LIBTONGSUOMINI:.............${COAP_WITH_LIBTONGSUOMINI}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "WITH_OBSERVE_PERSIST:............${WITH_OBSERVE_PERSIST}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
@@ -689,12 +700,13 @@ target_sources(
           $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
           $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
+          $<$<BOOL:${COAP_WITH_LIBTONGSUOMINI}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tongsuomini.c>
           # needed for OSCORE is enabled
-          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
-          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
-          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_context.c>
-          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cose.c>
-          $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_crypto.c>
+          $<$<AND:$<BOOL:${COAP_OSCORE_SUPPORT}>,$<NOT:$<BOOL:${WITH_TONGSUO_MINI}>>>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
+          $<$<AND:$<BOOL:${COAP_OSCORE_SUPPORT}>,$<NOT:$<BOOL:${WITH_TONGSUO_MINI}>>>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
+          $<$<AND:$<BOOL:${COAP_OSCORE_SUPPORT}>,$<NOT:$<BOOL:${WITH_TONGSUO_MINI}>>>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_context.c>
+          $<$<AND:$<BOOL:${COAP_OSCORE_SUPPORT}>,$<NOT:$<BOOL:${WITH_TONGSUO_MINI}>>>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cose.c>
+          $<$<AND:$<BOOL:${COAP_OSCORE_SUPPORT}>,$<NOT:$<BOOL:${WITH_TONGSUO_MINI}>>>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_crypto.c>
           # headers
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/libcoap.h
@@ -779,8 +791,9 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.h)
   # tests require libcunit (e.g. debian libcunit1-dev)
-  target_link_libraries(testdriver PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
-                                          -lcunit)
+  find_library(libcunit cunit)
+  # target_link_libraries(testdriver /opt/homebrew/Cellar/cunit/2.1-3/lib/libcunit.a)
+  target_link_libraries(testdriver ${PROJECT_NAME}::${COAP_LIBRARY_NAME} ${libcunit})
 endif()
 
 #

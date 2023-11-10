@@ -285,7 +285,11 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
   uint8_t *ciphertext_buffer = NULL;
   size_t ciphertext_len = 0;
   uint8_t aad_buffer[AAD_BUF_LEN];
+#ifdef COAP_WITH_LIBTONGSUOMINI
+  uint8_t nonce_buffer[16];
+#else
   uint8_t nonce_buffer[13];
+#endif
   coap_bin_const_t aad;
   coap_bin_const_t nonce;
   oscore_recipient_ctx_t *rcp_ctx = session->recipient_ctx;
@@ -354,7 +358,11 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
       send_partial_iv == OSCORE_SEND_PARTIAL_IV) {
     uint8_t partial_iv_buffer[8];
     size_t partial_iv_len;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR partial_iv;
+#else
     coap_bin_const_t partial_iv;
+#endif
     partial_iv_len = coap_encode_var_safe8(partial_iv_buffer,
                                            sizeof(partial_iv_buffer),
                                            snd_ctx->seq);
@@ -387,9 +395,14 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
      *   common_iv    (already in osc_ctx)
      */
     nonce.s = nonce_buffer;
-    nonce.length = 13;
-    oscore_generate_nonce(cose, osc_ctx, nonce_buffer, 13);
+    nonce.length = sizeof(nonce_buffer);
+    oscore_generate_nonce(cose, osc_ctx, nonce_buffer, sizeof(nonce_buffer));
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR nonce_str = {nonce.length, nonce.s};
+    cose_encrypt0_set_nonce(cose, &nonce_str);
+#else
     cose_encrypt0_set_nonce(cose, &nonce);
+#endif
     if (!oscore_increment_sender_seq(osc_ctx))
       goto error;
     if (osc_ctx->save_seq_num_func) {
@@ -418,7 +431,12 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
       cose_encrypt0_set_partial_iv(cose, NULL);
   }
   if (kid_context) {
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR kid_context_str = {kid_context->length, kid_context->s};
+    cose_encrypt0_set_kid_context(cose, &kid_context_str);
+#else
     cose_encrypt0_set_kid_context(cose, kid_context);
+#endif
   }
   oscore_option_len =
       oscore_encode_option_value(oscore_option, sizeof(oscore_option), cose,
@@ -482,7 +500,12 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
                                     aad_buffer,
                                     sizeof(aad_buffer));
     assert(aad.length < AAD_BUF_LEN);
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR aad_str = {aad.length, aad.s};
+    cose_encrypt0_set_aad(cose, &aad_str);
+#else
     cose_encrypt0_set_aad(cose, &aad);
+#endif
   }
 
   /*
@@ -584,6 +607,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
    *   plaintext
    */
   cose_encrypt0_set_key(cose, snd_ctx->sender_key);
+
   cose_encrypt0_set_plaintext(cose, plain_pdu->token, plain_pdu->used_size);
   dump_cose(cose, "Pre encrypt");
   ciphertext_buffer =
@@ -654,18 +678,41 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
         association->is_observe = 0;
       }
       /* Refresh the association */
+#ifdef COAP_WITH_LIBTONGSUOMINI
+     tsm_str_free(association->nonce); 
+#else
       coap_delete_bin_const(association->nonce);
-      association->nonce =
+#endif
+     association->nonce =
+#ifdef COAP_WITH_LIBTONGSUOMINI
+          tsm_str_dup(&cose->nonce);
+#else
           coap_new_bin_const(cose->nonce.s, cose->nonce.length);
-      if (association->nonce == NULL)
-        goto error;
+#endif
+      if (association->nonce == NULL) goto error;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      tsm_str_free(association->aad);
+#else
       coap_delete_bin_const(association->aad);
+#endif
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      association->aad = tsm_str_dup(&cose->aad);
+#else
       association->aad = coap_new_bin_const(cose->aad.s, cose->aad.length);
+#endif
       if (association->aad == NULL)
         goto error;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      tsm_str_free(association->partial_iv);
+#else
       coap_delete_bin_const(association->partial_iv);
+#endif
       association->partial_iv =
+#ifdef COAP_WITH_LIBTONGSUOMINI
+          tsm_str_dup(&cose->partial_iv);
+#else
           coap_new_bin_const(cose->partial_iv.s, cose->partial_iv.length);
+#endif
       if (association->partial_iv == NULL)
         goto error;
       association->recipient_ctx = rcp_ctx;
@@ -779,7 +826,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   cose_encrypt0_t cose[1];
   oscore_ctx_t *osc_ctx = NULL;
   uint8_t aad_buffer[AAD_BUF_LEN];
+#ifdef COAP_WITH_LIBTONGSUOMINI
+  uint8_t nonce_buffer[16];
+#else
   uint8_t nonce_buffer[13];
+#endif
   coap_bin_const_t aad;
   coap_bin_const_t nonce;
   int pltxt_size = 0;
@@ -902,32 +953,52 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                0);
       goto error_no_ack;
     }
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    osc_ctx = oscore_find_context(session->context,
+                                  &cose->key_id,
+                                  &cose->kid_context,
+                                  NULL,
+                                  &rcp_ctx);
+#else
     osc_ctx = oscore_find_context(session->context,
                                   cose->key_id,
                                   &cose->kid_context,
                                   NULL,
                                   &rcp_ctx);
+#endif
     if (!osc_ctx) {
       if (cose->kid_context.length > 0) {
         const uint8_t *ptr;
         size_t length;
         /* Appendix B.2 protocol check - Is the recipient key_id known */
+#ifdef COAP_WITH_LIBTONGSUOMINI
+        osc_ctx = oscore_find_context(session->context,
+                                      &cose->key_id,
+                                      NULL,
+                                      session->oscore_r2 != 0 ? (uint8_t *)&session->oscore_r2 : NULL,
+                                      &rcp_ctx);
+#else
         osc_ctx = oscore_find_context(session->context,
                                       cose->key_id,
                                       NULL,
                                       session->oscore_r2 != 0 ? (uint8_t *)&session->oscore_r2 : NULL,
                                       &rcp_ctx);
+#endif
         ptr = cose->kid_context.s;
         length = cose->kid_context.length;
         if (ptr && osc_ctx && osc_ctx->rfc8613_b_2 &&
             osc_ctx->mode == OSCORE_MODE_SINGLE) {
           /* Processing Appendix B.2 protocol */
           /* Need to CBOR unwrap kid_context */
+#ifdef COAP_WITH_LIBTONGSUOMINI
+          TSM_STR kid_context;
+#else
           coap_bin_const_t kid_context;
+#endif
 
           kid_context.length = oscore_cbor_get_element_size(&ptr, &length);
           kid_context.s = ptr;
-          cose_encrypt0_set_kid_context(cose, (coap_bin_const_t *)&kid_context);
+          cose_encrypt0_set_kid_context(cose, &kid_context);
 
           if (session->oscore_r2 != 0) {
             /* B.2 step 4 */
@@ -1030,8 +1101,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 
         if (ptr) {
           /* Need to CBOR unwrap kid_context */
+#ifdef COAP_WITH_LIBTONGSUOMINI
+          TSM_STR kid_context;
+#else
           coap_bin_const_t kid_context;
-
+#endif
           kid_context.length = oscore_cbor_get_element_size(&ptr, &length);
           kid_context.s = ptr;
           cose_encrypt0_set_kid_context(cose, &kid_context);
@@ -1118,7 +1192,12 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                     aad_buffer,
                                     sizeof(aad_buffer));
     assert(aad.length < AAD_BUF_LEN);
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR aad_str = {aad.length, aad.s};
+    cose_encrypt0_set_aad(cose, &aad_str);
+#else
     cose_encrypt0_set_aad(cose, &aad);
+#endif
 
     /*
      * RFC8613 8.2 Step 5.
@@ -1130,27 +1209,56 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
      *   common_iv    (already in osc_ctx)
      */
     nonce.s = nonce_buffer;
-    nonce.length = 13;
-    oscore_generate_nonce(cose, osc_ctx, nonce_buffer, 13);
+    nonce.length = sizeof(nonce_buffer);
+    oscore_generate_nonce(cose, osc_ctx, nonce_buffer, sizeof(nonce_buffer));
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR nonce_str = {nonce.length, nonce.s};
+    cose_encrypt0_set_nonce(cose, &nonce_str);
+#else
     cose_encrypt0_set_nonce(cose, &nonce);
+#endif
     /*
      * Set up an association for use in the response
      */
     association = oscore_find_association(session, &pdu_token);
     if (association) {
       /* Refresh the association */
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      tsm_str_free(association->nonce);
+#else
       coap_delete_bin_const(association->nonce);
+#endif
       association->nonce =
+#ifdef COAP_WITH_LIBTONGSUOMINI
+          tsm_str_dup(&cose->nonce);
+#else
           coap_new_bin_const(cose->nonce.s, cose->nonce.length);
+#endif
       if (association->nonce == NULL)
         goto error;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      tsm_str_free(association->partial_iv);
+#else
       coap_delete_bin_const(association->partial_iv);
+#endif
       association->partial_iv =
+#ifdef COAP_WITH_LIBTONGSUOMINI
+          tsm_str_dup(&cose->partial_iv);
+#else
           coap_new_bin_const(cose->partial_iv.s, cose->partial_iv.length);
+#endif
       if (association->partial_iv == NULL)
         goto error;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      tsm_str_free(association->aad);
+#else
       coap_delete_bin_const(association->aad);
+#endif
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      association->aad = tsm_str_dup(&cose->aad);
+#else
       association->aad = coap_new_bin_const(cose->aad.s, cose->aad.length);
+#endif
       if (association->aad == NULL)
         goto error;
       association->recipient_ctx = rcp_ctx;
@@ -1198,10 +1306,15 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
        *   partial_iv (as received)
        *   common_iv (already in osc_ctx)
        */
-      oscore_generate_nonce(cose, osc_ctx, nonce_buffer, 13);
+      oscore_generate_nonce(cose, osc_ctx, nonce_buffer, sizeof(nonce_buffer));
       nonce.s = nonce_buffer;
-      nonce.length = 13;
+      nonce.length = sizeof(nonce_buffer);
+#ifdef COAP_WITH_LIBTONGSUOMINI
+      TSM_STR nonce_str = {nonce.length, nonce.s};
+      cose_encrypt0_set_nonce(cose, &nonce_str);
+#else
       cose_encrypt0_set_nonce(cose, &nonce);
+#endif
     }
 #ifdef OSCORE_EXTRA_DEBUG
     dump_cose(cose, "!req post set nonce");
@@ -1254,7 +1367,12 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                     aad_buffer,
                                     sizeof(aad_buffer));
     assert(aad.length < AAD_BUF_LEN);
+#ifdef COAP_WITH_LIBTONGSUOMINI
+    TSM_STR aad_str = {aad.length, aad.s};
+    cose_encrypt0_set_aad(cose, &aad_str);
+#else
     cose_encrypt0_set_aad(cose, &aad);
+#endif
 #ifdef OSCORE_EXTRA_DEBUG
     dump_cose(cose, "!req post set aad");
 #endif /* OSCORE_EXTRA_DEBUG */
@@ -1849,8 +1967,13 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
   /* Preset with defaults */
   oscore_conf->replay_window = COAP_OSCORE_DEFAULT_REPLAY_WINDOW;
   oscore_conf->ssn_freq = 1;
+#ifdef COAP_WITH_LIBTONGSUOMINI
+  oscore_conf->aead_alg = COSE_ALGORITHM_ASCON_AEAD_16_128_128;
+  oscore_conf->hkdf_alg = COSE_HKDF_ALG_HKDF_ASCON_HASH;
+#else
   oscore_conf->aead_alg = COSE_ALGORITHM_AES_CCM_16_64_128;
   oscore_conf->hkdf_alg = COSE_HKDF_ALG_HKDF_SHA_256;
+#endif
   oscore_conf->rfc8613_b_1_2 = 1;
   oscore_conf->rfc8613_b_2 = 0;
   oscore_conf->break_sender_key = 0;
@@ -2098,7 +2221,6 @@ coap_delete_oscore_recipient(coap_context_t *context,
 }
 
 /** @} */
-
 #else /* !COAP_OSCORE_SUPPORT */
 int
 coap_oscore_is_supported(void) {

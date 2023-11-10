@@ -88,12 +88,20 @@
 
 #if defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT)
 /* Specific OSCORE general .h files */
+#ifdef COAP_WITH_LIBTONGSUOMINI
+#include <tongsuo/mem.h>
+#include <tongsuo/minisuo.h>
+#include <tongsuo/oscore_cbor.h>
+#include <tongsuo/oscore_context.h>
+#include <tongsuo/oscore.h>
+#else
 typedef struct oscore_ctx_t oscore_ctx_t;
 #include "oscore/oscore.h"
 #include "oscore/oscore_cbor.h"
 #include "oscore/oscore_cose.h"
 #include "oscore/oscore_context.h"
 #include "oscore/oscore_crypto.h"
+#endif
 #endif /* COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT */
 
 /* Specifically defined internal .h files */

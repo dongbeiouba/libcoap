@@ -17,7 +17,7 @@
 
 #include "coap3/coap_internal.h"
 
-#if !defined(COAP_WITH_LIBTINYDTLS) && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS)
+#if !defined(COAP_WITH_LIBTINYDTLS) && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS) && !defined(COAP_WITH_LIBTONGSUOMINI)
 
 int
 coap_dtls_is_supported(void) {

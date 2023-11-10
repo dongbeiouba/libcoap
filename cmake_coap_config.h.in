@@ -95,6 +95,9 @@
 /* Define to 1 if the system has libmbedtls */
 #cmakedefine COAP_WITH_LIBMBEDTLS @COAP_WITH_LIBMBEDTLS@
 
+/* Define to 1 if the system has tongsuo-mini */
+#cmakedefine COAP_WITH_LIBTONGSUOMINI @COAP_WITH_LIBTONGSUOMINI@
+
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@
 
